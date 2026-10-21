@@ -9,7 +9,7 @@ fs.mkdirSync(output,{recursive:true});
  let browser;
  try{
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
-  const base=`http://127.0.0.1:${server.address().port}${prefix}/`;
+  const base=process.env.PUBLIC_SITE_URL||`http://127.0.0.1:${server.address().port}${prefix}/`;
   const launch={headless:true};
   if(process.env.BROWSER_EXECUTABLE)launch.executablePath=process.env.BROWSER_EXECUTABLE;
   else if(process.platform==='win32')launch.executablePath='C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';

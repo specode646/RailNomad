@@ -16,6 +16,7 @@ def check_source():
     for path in (ROOT / 'railnomad').rglob('*.py'):
         text = path.read_text(encoding='utf-8')
         ast.parse(text)
+        assert not any(token in text for token in DENIED[:2]), path
         if path.name == 'fares.py':
             assert not any(token in text for token in DENIED)
     assert not (ROOT / 'data').exists(), 'Public repository must not include local data/'
