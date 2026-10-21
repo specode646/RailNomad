@@ -1,0 +1,37 @@
+{
+  "pyodide": "314.0.7",
+  "python": "3.14.2",
+  "emscripten": "5.0.3",
+  "modified_runtime": false,
+  "source_roots": [
+    "https://github.com/pyodide/pyodide/tree/314.0.7",
+    "https://github.com/python/cpython/tree/v3.14.2",
+    "https://github.com/emscripten-core/emscripten/tree/5.0.3"
+  ],
+  "licenses": [
+    {
+      "file": "Pyodide-LICENSE",
+      "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5"
+    },
+    {
+      "file": "CPython-3.14.2-license.rst",
+      "sha256": "c695d550b135e53e38807e76496d1db17d22c40e461d1f3f354c86188d3305dd"
+    },
+    {
+      "file": "Emscripten-5.0.3-LICENSE.txt",
+      "sha256": "620a78084fc7ca97c0b5dea9abf891f3ffcadfdbf305276f099c9c4e12fc1d86"
+    },
+    {
+      "file": "musl-COPYRIGHT.txt",
+      "sha256": "f9bc4423732350eb0b3f7ed7e91d530298476f8fec0c6c427a1c04ade22655af"
+    },
+    {
+      "file": "compiler-rt-LICENSE.txt",
+      "sha256": "1a8f1058753f1ba890de984e48f0242a3a5c29a6a8f2ed9fd813f36985387e8d"
+    },
+    {
+      "file": "libunwind-LICENSE.txt",
+      "sha256": "b5efebcaca80879234098e52d1725e6d9eb8fb96a19fce625d39184b705f7b6d"
+    }
+  ]
+}

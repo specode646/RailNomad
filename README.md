@@ -49,7 +49,7 @@ powershell -ExecutionPolicy Bypass -File scripts/build-windows.ps1 -Python pytho
 
 ```sh
 python scripts/check_public_release.py
-python -m pip install pytest==8.3.5
+python -m pip install -r requirements-dev.txt
 python -m pytest -q -p no:cacheprovider
 ```
 

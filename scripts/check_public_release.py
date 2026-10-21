@@ -44,6 +44,8 @@ def check_web():
     assert not any(p.suffix.lower() in ('.geojson', '.pbf') for p in folder.rglob('*'))
     assert (folder / 'licenses/MPL-2.0.txt').is_file()
     assert (folder / 'licenses/CPython-3.14.2-license.rst').is_file()
+    for name in ('Emscripten-5.0.3-LICENSE.txt','musl-COPYRIGHT.txt','compiler-rt-LICENSE.txt','libunwind-LICENSE.txt'):
+        assert (folder / 'licenses' / name).is_file(), name
     assert sum(p.stat().st_size for p in folder.rglob('*') if p.is_file()) < 1024**3
 
 
