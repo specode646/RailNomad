@@ -1,0 +1,4 @@
+* text=auto eol=lf
+*.csv -text
+*.sqlite3 -text
+*.xz -text
