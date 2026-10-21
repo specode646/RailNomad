@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "railnomad"
+version = "0.4.11+public.1"
+description = "Offline native desktop railway itinerary explorer"
+requires-python = ">=3.12"
+license = "MIT"
+dependencies = ["PySide6_Essentials==6.8.3", "shiboken6==6.8.3"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pyinstaller>=6"]
+
+[project.gui-scripts]
+railnomad = "railnomad.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["railnomad*"]
+
+[tool.setuptools.package-data]
+railnomad = ["ui/assets/*.svg", "data/reference/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

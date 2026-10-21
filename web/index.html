@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'; worker-src 'self' blob:; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#173f39"><meta name="description" content="夜间卧铺，白天漫游。在自己的浏览器中计算铁路慢旅行路线，计算留在浏览器，不提供自动核价。">
+  <title>RailNomad · 夜行漫游</title><link rel="icon" href="./mark.svg" type="image/svg+xml"><link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="./" aria-label="RailNomad 首页"><img src="./mark.svg" width="36" height="36" alt=""><span>RailNomad<small>夜车路线规划</small></span></a>
+    <div class="header-actions"><button id="help-button" class="text-button" type="button">帮助</button></div>
+  </header>
+  <main class="workspace">
+    <aside class="planner">
+      <h1>规划行程</h1>
+      <fieldset class="mode-picker" hidden><legend>计算方式</legend><div class="mode-options"><button id="local-mode" type="button" class="mode active" aria-pressed="true"><span>本机计算</span></button><button id="remote-mode" type="button" class="mode" aria-pressed="false"><span>后端 API</span></button></div></fieldset>
+      <div id="remote-banner" class="remote-banner" hidden><span id="remote-status">尚未连接后端</span><button id="connect-button" class="text-button" type="button">连接与登录</button></div>
+      <form id="planner-form">
+        <div class="journey-fields">
+          <label class="place-field"><span class="field-title"><i class="stop-dot"></i>出发地 <select id="origin-kind" aria-label="出发地类型"><option value="city">城市</option><option value="station">车站</option></select></span><input id="origin" name="origin" list="cities" value="大连市" required autocomplete="off" placeholder="输入城市或车站"></label>
+          <button id="swap" class="swap" type="button" aria-label="交换出发地与目的地">⇅</button>
+          <label class="place-field"><span class="field-title"><i class="stop-dot end"></i>目的地 <select id="destination-kind" aria-label="目的地类型"><option value="city">城市</option><option value="station">车站</option></select></span><input id="destination" name="destination" list="cities" value="厦门市" required autocomplete="off" placeholder="输入城市或车站"></label>
+        </div>
+        <label>出发日期<input id="departure-date" name="departure_date" type="date" required><span id="date-help" class="field-help">正在读取运行图覆盖日期…</span></label>
+        <label class="check-row small"><input id="all-dates" type="checkbox">全部适用日期</label>
+        <div class="field-grid"><label>最少卧铺夜数<input name="min_nights" id="min-nights" type="number" min="1" step="1" value="3" required></label><label>最多卧铺夜数<input name="max_nights" id="max-nights" type="number" min="1" step="1" value="4" required></label></div>
+        <label>学生参考预算<div class="money-input"><span>¥</span><input name="budget" id="budget" type="number" min="0" step="0.5" value="1000" required><span>每人</span></div></label>
+        <div class="quick-options"><label class="check-row"><input id="short-hsr" name="allow_short_hsr" type="checkbox">允许短高铁（≤60分钟）</label><label class="check-row"><input name="consecutive" id="consecutive" type="checkbox" checked>每晚都有卧铺</label></div>
+        <details class="advanced"><summary>更多选项</summary>
+          <p class="field-help">舒适时间用于排序；极限时间用于筛选。</p>
+          <div class="field-grid"><label>每天白昼在车<select id="daily-limit"><option value="180">最多 3 小时</option><option value="120">最多 2 小时</option><option value="240">最多 4 小时</option><option value="">不限</option><option value="custom">自定义分钟</option></select><input id="daily-custom" type="number" min="0" max="1439" value="180" aria-label="每天白昼在车自定义分钟" hidden></label><label>出发当天<select id="first-limit"><option value="240">最多 4 小时</option><option value="180">最多 3 小时</option><option value="">不限</option><option value="custom">自定义分钟</option></select><input id="first-custom" type="number" min="0" max="1439" value="240" aria-label="出发当天白昼在车自定义分钟" hidden></label></div>
+          <div class="field-grid"><label>抵达当天<select id="last-limit"><option value="300">最多 5 小时</option><option value="180">最多 3 小时</option><option value="">不限</option><option value="custom">自定义分钟</option></select><input id="last-custom" type="number" min="0" max="1439" value="300" aria-label="抵达当天白昼在车自定义分钟" hidden></label><label>卧铺最短乘车<input name="min_sleeper_minutes" type="number" min="1" value="450"><span class="field-help">分钟</span></label></div>
+          <div class="field-grid"><label>舒适发车起点<input name="target_depart_start" type="time" value="19:30" required></label><label>舒适发车终点<input name="target_depart_end" type="time" value="00:30" required></label><label>极限发车起点<input name="depart_start" type="time" value="19:00" required></label><label>极限发车终点<input name="depart_end" type="time" value="01:00" required></label><label>舒适到站起点<input name="target_arrive_start" type="time" value="06:30" required></label><label>舒适到站终点<input name="target_arrive_end" type="time" value="09:30" required></label><label>极限到站起点<input name="arrive_start" type="time" value="06:00" required></label><label>极限到站终点<input name="arrive_end" type="time" value="10:00" required></label><label>白昼起点<input name="daylight_start" type="time" value="07:00" required></label><label>白昼终点<input name="daylight_end" type="time" value="20:00" required></label></div>
+          <label>必须停留的城市<input id="required-cities" placeholder="如：北京市、南昌市" autocomplete="off"><span class="field-help">用空格或顿号分隔</span></label>
+          <label>必须停留关系<select name="required_city_mode"><option value="AND">每个都要经过</option><option value="OR">至少经过其中一个</option></select></label>
+          <label>禁止经过的城市<input id="forbidden-cities" placeholder="可留空"></label><label>优先停留的城市<input id="preferred-cities" placeholder="仅影响排序"></label>
+        </details>
+        <div id="form-error" class="inline-error" role="alert" hidden></div>
+        <button id="search-button" class="primary full" type="submit" disabled>搜索路线 <span aria-hidden="true">→</span></button>
+        <p id="mode-note" class="privacy-note">参数仅留在本机</p>
+      </form>
+      <datalist id="cities"></datalist><datalist id="stations"></datalist>
+    </aside>
+
+    <section class="results-workspace" aria-label="搜索与路线结果">
+      <div class="data-strip"><span><i class="live-dot"></i><b id="data-status">正在读取本地数据说明</b></span><button id="data-button" type="button" class="text-button">数据来源</button></div>
+      <section id="progress-panel" class="progress-panel" aria-live="polite" hidden><div class="progress-heading"><span class="spinner"></span><div><h3 id="progress-stage">准备搜索</h3><p id="progress-detail">正在准备本机计算环境…</p></div><button id="cancel-button" type="button" class="secondary">停止</button></div><div class="progress-track"><i></i></div></section>
+      <section id="welcome-panel" class="welcome-panel"><h2>还没有搜索结果</h2><p>设置行程后，点击“搜索路线”。</p><button id="example-button" type="button" class="example-button">试试：大连 → 哈尔滨 · 1 晚 <span aria-hidden="true">→</span></button></section>
+      <section id="result-panel" hidden><div class="section-heading"><div><h2 id="result-title">搜索结果</h2><p id="result-count" class="muted" aria-live="polite"></p></div><span id="completion-badge" class="badge"></span></div><div id="result-notice" class="result-notice" hidden></div><div class="result-toolbar"><label class="filter-search"><span aria-hidden="true">⌕</span><input id="result-search" placeholder="筛选途经城市" aria-label="筛选途经城市"></label><label class="sr-only" for="result-sort">结果排序</label><select id="result-sort"><option value="comfort">舒适时间优先</option><option value="changes">换站更少</option><option value="price">票价更低</option><option value="duration">全程更短</option><option value="nights">卧铺夜数更少</option></select><label class="check-row"><input id="known-price" type="checkbox">仅已知价</label></div><div id="routes" class="route-list"></div><div class="pagination"><button id="prev-page" class="secondary" type="button">← 上一页</button><span id="page-label"></span><button id="next-page" class="secondary" type="button">下一页 →</button></div></section>
+      <footer class="page-footer">票价供参考，请以铁路官方确认为准。</footer>
+    </section>
+  </main>
+  <dialog id="info-dialog" class="modal"><div class="modal-heading"><h2 id="info-title"></h2><button type="button" class="icon-button" data-close aria-label="关闭">×</button></div><div id="info-content"></div></dialog>
+  <dialog id="connect-dialog" class="modal"><form id="connect-form"><div class="modal-heading"><h2>连接后端 API</h2><button type="button" class="icon-button" data-close aria-label="关闭">×</button></div><p class="muted">账号密码将发送到你填写的服务地址。</p><div class="auth-tabs"><button type="button" id="auth-login" class="active">登录</button><button type="button" id="auth-register">注册账号</button></div><label>服务地址<input id="api-url" type="url" placeholder="https://api.example.com" required></label><div class="field-grid"><label>账号<input id="username" autocomplete="username" required></label><label>密码<input id="password" type="password" autocomplete="current-password" required></label></div><label id="repeat-password-label" hidden>再次输入密码<input id="repeat-password" type="password" autocomplete="new-password"></label><div id="connect-error" class="inline-error" role="alert" hidden></div><div class="modal-actions"><button class="primary" id="login-button" type="submit">连接并登录</button><button class="secondary" id="logout-button" type="button" hidden>退出连接</button></div><p class="field-help">需自备兼容服务，凭证仅在本次页面会话内保存。</p></form></dialog>
+  <dialog id="confirm-dialog" class="modal"><div class="modal-heading"><h2 id="confirm-title">确认操作</h2></div><div id="confirm-content"></div><div class="modal-actions"><button id="confirm-yes" type="button" class="primary">确认并继续</button><button id="confirm-no" type="button" class="secondary">返回修改</button></div></dialog>
+  <div id="toast" class="toast" role="status" hidden></div><script type="module" src="./app.js"></script>
+</body></html>

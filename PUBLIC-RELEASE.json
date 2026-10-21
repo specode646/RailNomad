@@ -1,0 +1,18 @@
+{
+  "edition": "public-offline",
+  "version": "0.4.11+public.1",
+  "core_version": "0.4.11",
+  "data": {
+    "snapshot": "e7ea23b91888908343b1cedc39f807ccbe61b6bd1001d6eb8207601e235a70c3",
+    "sha256": "4cb6b744ab9083cbbd6ea6e626777a2505361d9b921822500bb9fd6506bc66e1",
+    "private_evidence_count": 0
+  },
+  "excluded": [
+    "automatic fare implementation",
+    "private evidence",
+    "local data",
+    "historical reports"
+  ],
+  "generated": true,
+  "workflow": "Edit development source, export to a fresh staging directory, review diff in public repository, commit and tag there."
+}

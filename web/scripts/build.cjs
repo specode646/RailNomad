@@ -1,0 +1,15 @@
+const fs=require('fs'),path=require('path'),{execFileSync}=require('child_process');
+const web=path.resolve(__dirname,'..'),root=path.dirname(web),dist=path.join(web,'dist');
+fs.mkdirSync(dist,{recursive:true});
+const python=process.env.RAILNOMAD_PYTHON||'python';
+execFileSync(python,[path.join(__dirname,'prepare.py')],{cwd:root,stdio:'inherit',windowsHide:true});
+for(const file of ['index.html','styles.css','mark.svg','app.js','providers.js','itinerary.js','worker.js','engine.py'])fs.copyFileSync(path.join(web,file),path.join(dist,file));
+const runtime=path.join(web,'node_modules/pyodide');
+fs.mkdirSync(path.join(dist,'runtime'),{recursive:true});
+for(const file of ['pyodide.mjs','pyodide.asm.mjs','pyodide.asm.wasm','python_stdlib.zip','pyodide-lock.json'])fs.copyFileSync(path.join(runtime,file),path.join(dist,'runtime',file));
+fs.copyFileSync(path.join(root,'LICENSE'),path.join(dist,'CODE-LICENSE.txt'));
+fs.copyFileSync(path.join(web,'THIRD_PARTY.md'),path.join(dist,'THIRD_PARTY.md'));
+fs.cpSync(path.join(root,'web-licenses'),path.join(dist,'licenses'),{recursive:true});
+fs.writeFileSync(path.join(dist,'.nojekyll'),'');
+execFileSync(python,[path.join(root,'scripts/check_public_release.py'),'--web'],{cwd:root,stdio:'inherit',windowsHide:true});
+console.log('Built public static website:',dist);

@@ -1,0 +1,26 @@
+[
+  {
+    "file": "qtbase-everywhere-src-6.8.3.tar.xz",
+    "sha256": "56001b905601bb9023d399f3ba780d7fa940f3e4861e496a7c490331f49e0b80",
+    "bytes": 48426536,
+    "origin": "https://download.qt.io/archive/qt/6.8/6.8.3/submodules/qtbase-everywhere-src-6.8.3.tar.xz",
+    "modified": false,
+    "mirror": "https://mirrors.tuna.tsinghua.edu.cn/qt/archive/qt/6.8/6.8.3/submodules/qtbase-everywhere-src-6.8.3.tar.xz"
+  },
+  {
+    "file": "qtsvg-everywhere-src-6.8.3.tar.xz",
+    "sha256": "35eb516460f00f264eb504baa253432384351cf23fb9980a5857190e8deef438",
+    "bytes": 2009072,
+    "origin": "https://download.qt.io/archive/qt/6.8/6.8.3/submodules/qtsvg-everywhere-src-6.8.3.tar.xz",
+    "modified": false,
+    "mirror": "https://mirrors.tuna.tsinghua.edu.cn/qt/archive/qt/6.8/6.8.3/submodules/qtsvg-everywhere-src-6.8.3.tar.xz"
+  },
+  {
+    "file": "pyside-setup-everywhere-src-6.8.3.tar.xz",
+    "sha256": "d2c896f7f1a6a7ea4c9f98cfe317272fd139703ddf612b86999f09e48aeef0e6",
+    "bytes": 16611768,
+    "origin": "https://download.qt.io/official_releases/QtForPython/pyside6/PySide6-6.8.3-src/pyside-setup-everywhere-src-6.8.3.tar.xz",
+    "modified": false,
+    "mirror": "https://mirrors.tuna.tsinghua.edu.cn/qt/official_releases/QtForPython/pyside6/PySide6-6.8.3-src/pyside-setup-everywhere-src-6.8.3.tar.xz"
+  }
+]

@@ -1,0 +1,44 @@
+const fs=require('fs'),path=require('path'),http=require('http'),assert=require('assert/strict');
+const {chromium}=require('playwright');
+const {createServer}=require('../scripts/serve.cjs');
+const root=path.resolve(__dirname,'../..'),output=path.join(root,'dist/verification');
+fs.mkdirSync(output,{recursive:true});
+(async()=>{
+ const handler=createServer().listeners('request')[0],prefix='/sample-repository';
+ const server=http.createServer((req,res)=>{if(!req.url.startsWith(prefix+'/')){res.writeHead(404);return res.end()}req.url=req.url.slice(prefix.length);handler(req,res)});
+ let browser;
+ try{
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const base=`http://127.0.0.1:${server.address().port}${prefix}/`;
+  const launch={headless:true};
+  if(process.env.BROWSER_EXECUTABLE)launch.executablePath=process.env.BROWSER_EXECUTABLE;
+  else if(process.platform==='win32')launch.executablePath='C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
+  browser=await chromium.launch(launch);
+  const page=await browser.newPage({viewport:{width:1440,height:1050}}),errors=[],external=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  await page.route('**/*',route=>{const url=route.request().url();if(url.startsWith(base)||url.startsWith('blob:')||url.startsWith('data:'))return route.continue();external.push(url);return route.abort()});
+  await page.goto(base);
+  await page.waitForFunction(()=>!document.getElementById('search-button').disabled);
+  assert.equal(await page.locator('.mode-picker').isVisible(),false);
+  assert.equal(await page.locator('#remote-banner').isVisible(),false);
+  await page.locator('#example-button').click();
+  const start=Date.now();await page.locator('#search-button').click();
+  await page.waitForFunction(()=>!document.getElementById('result-panel').hidden,{},{timeout:120000});
+  const text=await page.locator('#result-count').textContent();
+  assert.match(text,/4/);
+  await page.locator('.route-link > summary').first().click();
+  await page.locator('.variant').first().waitFor();
+  await page.locator('.variant details > summary').first().click();
+  await page.locator('.leg').first().waitFor();
+  assert(await page.locator('.timeline-rail').first().evaluate(element=>getComputedStyle(element).backgroundImage.includes('linear-gradient')),'Timeline styles must be permitted by the public CSP');
+  assert.equal(await page.locator('[data-check-fare]').count(),0);
+  const seconds=(Date.now()-start)/1000;
+  await page.screenshot({path:path.join(output,'web-public-desktop.png'),fullPage:true});
+  await page.setViewportSize({width:390,height:844});
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
+  await page.screenshot({path:path.join(output,'web-public-narrow.png'),fullPage:true});
+  assert.deepEqual(external,[]);assert.deepEqual(errors,[]);
+  const report={real_search:true,result_text:text,first_search_seconds:seconds,repository_subpath:true,no_business_backend:true,no_external_requests:true,no_page_errors:true,narrow_layout:true,phone_hardware_tested:false};
+  fs.writeFileSync(path.join(output,'web-acceptance.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+ }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve))}
+})().catch(error=>{console.error(error);process.exitCode=1});

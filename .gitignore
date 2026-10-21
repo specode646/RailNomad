@@ -1,0 +1,13 @@
+node_modules/
+dist/
+web/dist/
+build/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.spec
+.venv/
+.desktop-venv/
+third-party/sources/
+.env
+*.log
