@@ -43,7 +43,29 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
+  verify-live:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - run: npm --prefix web ci
+      - name: Install isolated browser
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+      - name: Exercise the deployed site
+        env:
+          PUBLIC_SITE_URL: ${{ needs.deploy.outputs.page_url }}
+        run: npm --prefix web test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: live-web-verification
+          path: dist/verification
