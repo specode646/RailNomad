@@ -52,11 +52,14 @@ def verify(exe, day):
         code,event=job('export',run_id=run,path=str(home/'exported'),filters={},scope='all')
         assert code==0 and event['event']=='done',event
         assert (Path(event['result'])/'DATA-LICENSES.txt').is_file()
+        assert subprocess.run([str(exe),'--offline','--smoke','--smoke-settings',run],**flags).returncode==0
+        assert (home/'task-settings-smoke.png').is_file()
+        shutil.copyfile(home/'task-settings-smoke.png',folder/'desktop-task-settings.png')
         assert subprocess.run([str(exe),'--offline','--smoke','--smoke-run',run],**flags).returncode==0
         shutil.copyfile(home/'desktop-smoke.png',folder/'desktop-public-results.png')
         report=dict(edition='public-offline',date=day,real_executable=True,results=count,search_wall_seconds=seconds,
                     reference_stations=3146,automatic_lookup_rejected=True,no_quote_cache=True,export_verified=True,
-                    executable_sha256=hashlib.sha256(exe.read_bytes()).hexdigest())
+                    task_settings_gui_verified=True,executable_sha256=hashlib.sha256(exe.read_bytes()).hexdigest())
     (folder/'desktop-acceptance.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
     print(encode(report))
 

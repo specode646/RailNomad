@@ -12,10 +12,11 @@ def main():
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--smoke-run")
     parser.add_argument("--smoke-result")
+    parser.add_argument('--smoke-settings')
     parser.add_argument('--smoke-page',choices=['planner','tasks','favorites','data','help'])
     parser.add_argument("--offline", action="store_true")
     args = parser.parse_args()
-    if (args.smoke_run or args.smoke_result or args.smoke_page) and not args.smoke:
+    if (args.smoke_run or args.smoke_result or args.smoke_page or args.smoke_settings) and not args.smoke:
         parser.error('界面验收参数须与 --smoke 一起使用')
     if args.offline:
         os.environ['RAILNOMAD_OFFLINE'] = '1'
@@ -44,10 +45,16 @@ def main():
     window.suppress_fare_sync=args.smoke
     window.show()
     if args.smoke:
+        if args.smoke_settings:window.nav.setCurrentRow(1)
         if args.smoke_page:window.nav.setCurrentRow(['planner','tasks','favorites','data','help'].index(args.smoke_page))
         if args.smoke_run:
             window.results.load(args.smoke_run);window.pages.setCurrentWidget(window.results)
         def capture():
+            if args.smoke_settings:
+                row=next(i for i,run in enumerate(window.tasks.runs) if run['id']==args.smoke_settings)
+                window.tasks.table.selectRow(row)
+                dialog=window.tasks.settings();app.processEvents()
+                dialog.grab().save(str(home/'task-settings-smoke.png'));dialog.close()
             if args.smoke_page=='help':
                 from .ui.widgets import Disclosure
                 for section in window.pages.currentWidget().findChildren(Disclosure):
