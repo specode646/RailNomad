@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "railnomad"
-version = "0.4.16+public.1"
+version = "0.4.16+public.2"
 description = "Offline native desktop railway itinerary explorer"
 requires-python = ">=3.12"
 license = "MIT"

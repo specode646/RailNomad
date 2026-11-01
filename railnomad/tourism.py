@@ -5,6 +5,7 @@ import json
 import math
 import sqlite3
 import time
+from contextlib import closing
 from pathlib import Path
 
 from .data.release import check_cancel
@@ -125,7 +126,7 @@ def build(store, run_id, progress=lambda **kw: None, cancel=lambda: False):
         station_cities = {}
         snapshot_path = Path(request_row[2])
         if snapshot_path.is_file():
-            with sqlite3.connect(snapshot_path.resolve().as_uri()+'?mode=ro', uri=True) as snapshot_db:
+            with closing(sqlite3.connect(snapshot_path.resolve().as_uri()+'?mode=ro', uri=True)) as snapshot_db:
                 station_cities = {sid:city for sid,city in snapshot_db.execute('SELECT id,city FROM stops') if city}
         station_cities.update(checkpoint.get('mappings') or {})
         count, tail = db.execute('SELECT COUNT(*),COALESCE(MAX(rowid),0) FROM results WHERE run_id=?', (run_id,)).fetchone()

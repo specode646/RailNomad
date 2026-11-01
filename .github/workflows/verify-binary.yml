@@ -5,7 +5,7 @@ on:
       tag:
         description: Published public release tag
         required: true
-        default: public-v0.4.16.1
+        default: public-v0.4.16.2
 permissions:
   contents: read
 jobs:

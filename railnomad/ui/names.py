@@ -1,5 +1,6 @@
 """Resolve human place names before requests cross into the search domain."""
 import json,re,sqlite3
+from contextlib import closing
 from pathlib import Path
 from collections import defaultdict
 from PySide6.QtCore import Qt
@@ -30,7 +31,7 @@ class NameCatalog:
     def load(cls,store,snapshot,mappings=None):
         snap=store.snapshot(snapshot)
         mappings=store.setting('city_mapping:'+snapshot,{}) if mappings is None else mappings
-        with sqlite3.connect(snap['path']) as db:
+        with closing(sqlite3.connect(snap['path'])) as db:
             stations=[(sid,name,mappings.get(sid) or city) for sid,name,city in db.execute('SELECT id,name,city FROM stops ORDER BY name,id')]
             trains=list(db.execute('SELECT id,name FROM trips'))
         return cls(stations,trains)

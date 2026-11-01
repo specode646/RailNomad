@@ -8,6 +8,7 @@ import hashlib
 import json
 import sqlite3
 from collections import Counter, defaultdict
+from contextlib import closing
 from datetime import date
 from functools import lru_cache
 import time
@@ -26,7 +27,7 @@ from .model import Request, daylight, daylight_limit_minutes, in_wrapped_window,
 def available_departure_dates(snapshot, earliest=None):
     """Actual boarding calendar days, including GTFS service times beyond 24h."""
     earliest = earliest or today_china()
-    with sqlite3.connect(snapshot['path']) as db:
+    with closing(sqlite3.connect(snapshot['path'])) as db:
         offsets = defaultdict(set)
         flagged=bool(db.execute("SELECT 1 FROM sqlite_master WHERE name='call_time_issues'").fetchone())
         boarding=" AND NOT EXISTS(SELECT 1 FROM call_time_issues f WHERE f.trip=c.trip AND f.seq=c.seq AND f.event='dep')" if flagged else ''

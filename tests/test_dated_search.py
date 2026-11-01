@@ -12,6 +12,30 @@ from test_continuity import connection_snapshot
 from test_requirements_audit import build
 
 
+def test_departure_dates_close_snapshot_connection(store, snapshot, monkeypatch):
+    import sqlite3
+    from railnomad.domain import search as search_module
+    original = sqlite3.connect
+    connections = []
+
+    class Connection(sqlite3.Connection):
+        closed = False
+
+        def close(self):
+            self.closed = True
+            super().close()
+
+    def connect(*args, **kwargs):
+        db = original(*args, factory=Connection, **kwargs)
+        connections.append(db)
+        return db
+
+    metadata = store.snapshot(snapshot)
+    monkeypatch.setattr(search_module.sqlite3, 'connect', connect)
+    available_departure_dates(metadata, earliest=date(2026, 12, 31))
+    assert connections and all(db.closed for db in connections)
+
+
 def signatures(store,run,day=None):
     found=set()
     for row in query(store,run,page_size=100000)[0]:
