@@ -66,6 +66,8 @@ class Store:
             install(db)
             from .deletion import install as install_deletion
             install_deletion(db)
+            from .tourism import install as install_tourism
+            install_tourism(db)
 
     @contextmanager
     def connect(self):

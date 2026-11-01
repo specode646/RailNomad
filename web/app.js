@@ -96,7 +96,7 @@ $('planner-form').onsubmit=async event=>{
     $('progress-detail').textContent=`保存 ${num(audit.complete_candidates)} 条候选${state.result.seconds!==undefined?' · 计算 '+state.result.seconds.toFixed(1)+' 秒':''}`;
     $('progress-panel').hidden=true;$('completion-badge').textContent=status==='completed'?`已完成${state.result.seconds!==undefined?' · '+state.result.seconds.toFixed(1)+'秒':''}`:'部分结果 · 未完成';$('completion-badge').classList.toggle('warn',status!=='completed');
     $('result-notice').hidden=status==='completed';$('result-notice').textContent=audit.resource_stop||'本次尚未搜完，以下为已保存结果。';
-    $('result-search').value='';$('result-sort').value='comfort';$('known-price').checked=false;state.page=0;await renderResults();
+    $('result-search').value='';$('result-sort').value='recommendation';$('known-price').checked=false;state.page=0;await renderResults();
   }catch(error){showError(error.message);$('progress-panel').hidden=true;if(state.mode==='local'&&error.name!=='AbortError')toast('仍在本机模式，没有自动发送参数到后端。')}
   finally{setBusy(false);updatePaging()}
 };

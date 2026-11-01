@@ -10,7 +10,7 @@ try {
     if ($LASTEXITCODE -ne 0) {throw '公开边界检查失败'}
     & $Python scripts/download_license_sources.py
     if ($LASTEXITCODE -ne 0) {throw '对应源码未准备齐全'}
-    & $Python -m PyInstaller --noconfirm --windowed --onedir --name RailNomad --distpath $distPath --workpath "$workspaceRoot\build" --collect-submodules railnomad --hidden-import PySide6.support.deprecated --add-data 'railnomad/ui/assets;railnomad/ui/assets' --add-data 'railnomad/data/reference;railnomad/data/reference' --add-data 'public-data;public-data' --exclude-module PySide6.QtWebEngineCore --exclude-module PySide6.QtWebEngineWidgets --exclude-module PySide6.QtQml --exclude-module PySide6.QtNetwork --exclude-module PySide6.QtPdf run.py
+    & $Python -m PyInstaller --noconfirm --windowed --onedir --name RailNomad --distpath $distPath --workpath "$workspaceRoot\build" --collect-submodules railnomad --hidden-import PySide6.support.deprecated --add-data 'railnomad/ui/assets;railnomad/ui/assets' --add-data 'railnomad/data/reference;railnomad/data/reference' --add-data 'railnomad/data/tourism-scores.csv;railnomad/data' --add-data 'railnomad/data/transport-scores.csv;railnomad/data' --add-data 'public-data;public-data' --exclude-module PySide6.QtWebEngineCore --exclude-module PySide6.QtWebEngineWidgets --exclude-module PySide6.QtQml --exclude-module PySide6.QtNetwork --exclude-module PySide6.QtPdf run.py
     if ($LASTEXITCODE -ne 0) {throw '桌面打包失败'}
     & $Python scripts/trim_qt_runtime.py $packageRoot
     if ($LASTEXITCODE -ne 0) {throw 'Qt 裁剪检查失败'}

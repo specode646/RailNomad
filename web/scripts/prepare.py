@@ -45,6 +45,8 @@ for path in (ROOT / 'railnomad').rglob('*.py'):
     relative = path.relative_to(ROOT)
     if 'ui' not in relative.parts and path.name not in ('__main__.py', 'worker.py', 'public_data.py'):
         sources.append(dict(path=relative.as_posix(), source=path.read_text(encoding='utf-8')))
+for path in (ROOT / 'railnomad/data/tourism-scores.csv', ROOT / 'railnomad/data/transport-scores.csv'):
+    sources.append(dict(path=path.relative_to(ROOT).as_posix(), source=path.read_text(encoding='utf-8-sig')))
 for name, value in [('manifest.json', metadata), ('input.json', dict(snapshot=snapshot, mapping=mapping, evidence=[])), ('sources.json', sources)]:
     (output / name).write_text(json.dumps(value, ensure_ascii=False), encoding='utf-8')
 print(json.dumps(dict(public=True, stations=len(stations), mapping=len(mapping), private_evidence=0)))

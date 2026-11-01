@@ -9,6 +9,7 @@
 - 按城市或车站、出发日期和夜数搜索路线。
 - 设置舒适与极限到发时间、白天乘车上限，以及短高铁衔接。
 - 指定必须停留或避开的城市，查看不同车次与换站搭配。
+- 以旅游资源、白天停留、城市交通和舒适时间综合排序，较小的舒适时间偏离只产生较小扣分。
 - 通过时间轴查看行程、乘车日期和中途停留。
 - Windows 版还支持保存任务、查看每次检索的详细设置、收藏、路线比较和导出。
 
@@ -34,6 +35,8 @@
 
 当前版本不自动查询票价。Windows 版可[导入有来源的票价资料](docs/manual-evidence.md)，用于参考费用和预算计算；缺失的价格保持未知。
 
+综合推荐使用项目整理的城市资源与交通主观估值；资料不完整，交通不代表实际接驳时长。舒适时间累计偏离每小时扣 5 分，最多扣 20 分；票价不计入综合分。
+
 复杂路线可能产生大量结果，建议先从较少夜数开始。运行图只覆盖一定日期范围，数据过期后需要更新。手机可使用网页，实际性能取决于设备，尚未完成真机性能验收。
 
 ## 开发
@@ -46,4 +49,4 @@
 
 自有代码采用 [MIT License](LICENSE)。运行图来自 [wensimehrp/chinese-railway-gtfs](https://github.com/wensimehrp/chinese-railway-gtfs)，上游声明为 CC BY 4.0；车站坐标归属 [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright)，采用 ODbL。
 
-第三方组件、数据来源及各自许可见 [第三方声明](THIRD_PARTY_NOTICES.md) 和 [网页组件说明](web/THIRD_PARTY.md)。
+城市评分的来源和局限见[评分数据说明](docs/SCORE-DATA.md)。第三方组件、数据来源及各自许可见 [第三方声明](THIRD_PARTY_NOTICES.md) 和 [网页组件说明](web/THIRD_PARTY.md)。

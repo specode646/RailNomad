@@ -28,6 +28,8 @@ fs.mkdirSync(output,{recursive:true});
   await page.waitForFunction(()=>!document.getElementById('result-panel').hidden,{},{timeout:120000});
   const text=await page.locator('#result-count').textContent();
   assert.match(text,/4/);
+  assert.equal(await page.locator('#result-sort').inputValue(),'recommendation');
+  assert.equal(await page.locator('#result-sort option[value="recommendation"]').count(),1);
   await page.locator('.route-link > summary').first().click();
   await page.locator('.variant').first().waitFor();
   await page.locator('.variant details > summary').first().click();

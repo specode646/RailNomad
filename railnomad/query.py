@@ -100,6 +100,7 @@ def query(store, run_id, filters=None, page=0, page_size=30, grouped=False, sort
     condition,args = where(run_id, filters,assessments=has_assessments)
     price='COALESCE((SELECT high FROM fare_assessments WHERE result_id=r.id),r.price)' if has_assessments else 'r.price'
     order = {'changes':'r.changes,r.id', 'price':'r.price IS NULL,r.price,r.id',
+             'recommendation':'t.score DESC,t.result_id',
              'duration':"json_extract(rn_payload(r.payload),'$.legs[#-1].arr')-json_extract(rn_payload(r.payload),'$.legs[0].dep'),r.id",
              'nights':'r.nights,r.id',
              'daylight':"json_extract(rn_payload(r.payload),'$.min_daylight_off_minutes') DESC,r.id",
@@ -110,8 +111,23 @@ def query(store, run_id, filters=None, page=0, page_size=30, grouped=False, sort
              'preference':"json_extract(rn_payload(r.payload),'$.preference_score') DESC,r.id"}.get(sort,'r.id')
     if has_assessments:order=order.replace('r.price',price)
     hint='' if 'ids' in (filters or {}) else ' INDEXED BY '+('results_run_browser' if grouped or (filters or {}).get('pattern') else 'results_run_page')
+    source = 'results r' + hint
+    if sort == 'recommendation':
+        source = 'tourism_rank t INDEXED BY tourism_rank_order CROSS JOIN results r ON r.id=t.result_id'
+        condition = 't.run_id=? AND ' + condition
+        args = [run_id] + args
     with store.connect() as db:
         db.execute('BEGIN')
+        cache = None
+        cache_key = None
+        if sort == 'recommendation':
+            generation = db.execute('SELECT value FROM settings WHERE key=?', ('tourism_generation:'+run_id,)).fetchone()
+            revision = db.execute("SELECT value FROM settings WHERE key='tourism_filter_revision'").fetchone()
+            cache_key = (run_id, json.dumps(filters or {}, sort_keys=True, ensure_ascii=False), grouped,
+                         generation[0] if generation else '', revision[0] if revision else '')
+            if not hasattr(store, '_tourism_page_cache'):
+                store._tourism_page_cache = {}
+            cache = store._tourism_page_cache.get(cache_key)
         if grouped:
             scalar={
                 'duration':"json_extract(rn_payload(r.payload),'$.duration_seconds')",
@@ -133,8 +149,10 @@ def query(store, run_id, filters=None, page=0, page_size=30, grouped=False, sort
                 'first_night':f'MIN({scalar}) IS NULL,MIN({scalar}),r.pattern',
                 'evidence':f'MIN({scalar}),r.pattern',
                 'preference':f'MAX({scalar}) DESC,r.pattern'
+                ,'recommendation':'MAX(t.score) DESC,r.pattern'
             }.get(sort,'r.pattern')
             if has_assessments:group_order=group_order.replace('r.price',price)
+            representative_column = ",substr(MIN(printf('%012d',100000000-CAST(ROUND(t.score*1000000) AS INTEGER))||r.id),13) representative" if sort=='recommendation' else ''
             sql=f"""SELECT r.pattern,COUNT(*) variants,
                        SUM(r.status='passed') passed_count,
                        SUM(r.status='pending') pending_count,
@@ -143,25 +161,43 @@ def query(store, run_id, filters=None, page=0, page_size=30, grouped=False, sort
                        MIN(r.nights) min_nights,MAX(r.nights) max_nights,
                        MIN(r.changes) min_changes,MAX(r.changes) max_changes,
                        MIN({price}) price,
-                       COUNT(*) OVER() group_total,SUM(COUNT(*)) OVER() variant_total
-                    FROM results r{hint} WHERE {condition}
-                    GROUP BY r.pattern ORDER BY {group_order} LIMIT ? OFFSET ?"""
-            rows=[dict(r) for r in db.execute(sql,args+[page_size,page*page_size])]
+                       COUNT(*) OVER() group_total,SUM(COUNT(*)) OVER() variant_total {representative_column}
+                    FROM {source} WHERE {condition}
+                    GROUP BY r.pattern ORDER BY {group_order}"""
+            if sort == 'recommendation':
+                if cache is None:
+                    all_rows = [dict(r) for r in db.execute(sql,args)]
+                    store._tourism_page_cache = {cache_key: all_rows}
+                else:
+                    all_rows = cache
+                rows = [dict(r) for r in all_rows[page*page_size:page*page_size+page_size]]
+                if all_rows:
+                    groups,total=all_rows[0]['group_total'],all_rows[0]['variant_total']
+                else:groups,total=0,0
+            else:
+                rows=[dict(r) for r in db.execute(sql+' LIMIT ? OFFSET ?',args+[page_size,page*page_size])]
             if rows:
-                groups,total=rows[0]['group_total'],rows[0]['variant_total']
+                if sort != 'recommendation':groups,total=rows[0]['group_total'],rows[0]['variant_total']
                 for row in rows:
                     row.pop('group_total');row.pop('variant_total')
-                    selected=db.execute('SELECT r.id FROM results r INDEXED BY results_run_browser WHERE '+condition+' AND r.pattern=? ORDER BY '+order+' LIMIT 1',args+[row['pattern']]).fetchone()
-                    row['representative']=selected[0]
+                    if sort != 'recommendation':
+                        selected=db.execute('SELECT r.id FROM '+source+' WHERE '+condition+' AND r.pattern=? ORDER BY '+order+' LIMIT 1',args+[row['pattern']]).fetchone()
+                        row['representative']=selected[0]
+            elif sort == 'recommendation':
+                pass
             elif page or page_size==0:
-                total,groups=db.execute('SELECT COUNT(*),COUNT(DISTINCT pattern) FROM results r'+hint+' WHERE '+condition,args).fetchone()
+                total,groups=db.execute('SELECT COUNT(*),COUNT(DISTINCT r.pattern) FROM '+source+' WHERE '+condition,args).fetchone()
             else:
                 groups,total=0,0
             return rows,groups,total
-        total=db.execute('SELECT COUNT(*) FROM results r'+hint+' WHERE '+condition,args).fetchone()[0]
+        if sort == 'recommendation' and cache is not None:
+            total = cache
+        else:
+            total=db.execute('SELECT COUNT(*) FROM '+source+' WHERE '+condition,args).fetchone()[0]
+            if sort == 'recommendation':store._tourism_page_cache = {cache_key: total}
         # Sort identifiers and scalar keys, then fetch only the requested page.
         # Carrying full JSON through SQLite's sorter spills gigabytes to disk.
-        ids=[r[0] for r in db.execute('SELECT r.id FROM results r'+hint+' WHERE '+condition+' ORDER BY '+order+' LIMIT ? OFFSET ?',args+[page_size,page*page_size])]
+        ids=[r[0] for r in db.execute('SELECT r.id FROM '+source+' WHERE '+condition+' ORDER BY '+order+' LIMIT ? OFFSET ?',args+[page_size,page*page_size])]
         rows={}
         for start in range(0,len(ids),500):
             chunk=ids[start:start+500]

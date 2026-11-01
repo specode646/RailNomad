@@ -51,6 +51,9 @@ def start(values):
     def progress(**event):
         browser_progress(encode(event))
     audit = search(store, current_run, progress)
+    from railnomad.tourism import build, available
+    if available():
+        build(store, current_run, progress)
     return dict(run_id=current_run, status=audit['status'], audit=audit,
                 seconds=time.perf_counter()-started, request=current_request.to_dict())
 
@@ -77,7 +80,7 @@ def results(values):
         filters['pattern'] = values['pattern']
     size = 12 if grouped else 8
     rows, total, variants = query(store, current_run, filters, page, size,
-                                  grouped=grouped, sort=values.get('sort','comfort'))
+                                  grouped=grouped, sort=values.get('sort','recommendation'))
     if not grouped:
         rows = [summary(json.loads(row['payload'])) for row in rows]
     return dict(items=rows, total_items=total, total_variants=variants,

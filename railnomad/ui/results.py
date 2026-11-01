@@ -79,7 +79,9 @@ class ResultsPage(QWidget):
         self.favorites = favorites
         self.run_id = None
         self.attempted_fare_sync=None
+        self.attempted_tourism_rank=None
         self.main.worker.finished.connect(lambda:QTimer.singleShot(0,self.sync_cached_fares))
+        self.main.worker.finished.connect(lambda:QTimer.singleShot(0,self.prepare_recommendation))
         self.page = 0
         self.rows = []
         layout = QVBoxLayout(self)
@@ -116,7 +118,11 @@ class ResultsPage(QWidget):
         self.changes = QComboBox();self.changes.addItems(['换站不限','不换站','至多换站一次'])
         self.known = QCheckBox('只看完整参考价')
         self.view = QComboBox();self.view.addItems(['城市路线卡','全部具体方案'])
-        self.sort = QComboBox();self.sort.addItems(['舒适时间优先','少换站','参考费用','总行程时间','卧铺夜数','白天少坐车','车次首晚','证据完整性','偏好匹配'])
+        from ..tourism import available
+        self.sort = QComboBox()
+        if available():self.sort.addItem('综合推荐','recommendation')
+        for title,key in [('舒适时间优先','comfort'),('少换站','changes'),('参考费用','price'),('总行程时间','duration'),('卧铺夜数','nights'),('白天少坐车','daylight'),('车次首晚','first_night'),('证据完整性','evidence'),('偏好匹配','preference')]:self.sort.addItem(title,key)
+        self.sort.setToolTip('综合旅游资源与白昼停留、城市交通、舒适时间和换乘；票价不参与排序。城市分值包含主观估值，可能不完整。')
         row = QHBoxLayout()
         for title,field in [('短高铁',self.short),('换站',self.changes),('视图',self.view),('排序',self.sort)]:form.addRow(title,field)
         form.addRow(self.known)
@@ -190,7 +196,20 @@ class ResultsPage(QWidget):
         self.budget.setValue(self.request['budget'])
         self.page=0
         self.refresh()
+        QTimer.singleShot(0,self.prepare_recommendation)
         QTimer.singleShot(0,self.sync_cached_fares)
+
+    def prepare_recommendation(self):
+        if not self.run_id or self.main.closing or self.main.worker.running:return
+        if self.main.pages.currentWidget() is not self:return
+        from ..tourism import ready, available
+        if not available():return
+        if ready(self.main.store,self.run_id):return
+        revision=self.main.store.setting('catalog_revision',0)
+        attempt=(self.run_id,revision)
+        if self.attempted_tourism_rank==attempt:return
+        self.attempted_tourism_rank=attempt
+        self.main.start_job('tourism_rank',lambda _:self.refresh(),run_id=self.run_id)
 
     def sync_cached_fares(self):
         if not self.run_id or self.main.closing or getattr(self.main,'suppress_fare_sync',False) or self.main.worker.running:return
@@ -267,9 +286,26 @@ class ResultsPage(QWidget):
         if not records:self.clear('该检索任务已删除');return
         self.run=records[0]
         self.grouped=self.view.currentIndex()==0
-        sort=['comfort','changes','price','duration','nights','daylight','first_night','evidence','preference'][self.sort.currentIndex()]
+        sort=self.sort.currentData()
         try:
-            self.rows,self.total,total_variants=query(self.main.store,self.run_id,self.filters(),self.page,30,self.grouped,sort)
+            active_filters=self.filters()
+            validate_filters(self.main.store,self.run_id,active_filters)
+        except ValueError as exc:
+            self.rows=[];self.total=0;self.table.setRowCount(0);self.cards.clear()
+            self.info.setText(str(exc));self.count.setText('范围未计算或筛选参数无效')
+            return
+        if sort=='recommendation':
+            from ..tourism import ready
+            if not ready(self.main.store,self.run_id):
+                QTimer.singleShot(0,self.prepare_recommendation)
+                self.rows=[];self.total=0;self.table.setRowCount(0);self.cards.clear()
+                message='正在准备综合排序，请稍候。'
+                if self.run['status']=='limited':
+                    message+=' 受限停止，结果不完整。'+json.loads(self.run['audit']).get('resource_stop','达到资源保护上限')
+                self.info.setText(message);self.info.setToolTip(message);self.count.setText('综合排序准备中')
+                return
+        try:
+            self.rows,self.total,total_variants=query(self.main.store,self.run_id,active_filters,self.page,30,self.grouped,sort)
         except ValueError as exc:
             self.rows=[];self.total=0;self.table.setRowCount(0);self.cards.clear()
             self.info.setText(str(exc));self.count.setText('范围未计算或筛选参数无效')
@@ -283,6 +319,8 @@ class ResultsPage(QWidget):
         if outdated_search_rules(self.request):
             self.info.setText('历史任务保留原始结果；旧舒适度索引可能未计首末程，请新建任务获得准确筛选和推荐。\n' + self.info.text())
         details=self.info.text()
+        if self.sort.currentData()=='recommendation':
+            details+='\n综合推荐：资源与白昼停留 55 分、城市交通 15 分、舒适时间 20 分、换乘便利 10 分。未知城市取中性值；不含市内接驳时间和票价。到发累计偏离舒适时间每 60 分钟扣 5 分，最多扣 20 分。'
         if self.run['status']=='limited':details+='\n受限停止：'+json.loads(self.run['audit']).get('resource_stop','达到资源保护上限')+'；结果不完整。'
         self.info_help.set_help(details);self.info.setToolTip(details)
         origin=self.catalog.station_name(self.request['origin']) if self.request.get('origin_kind')=='station' else self.request['origin']
@@ -371,7 +409,10 @@ class ResultsPage(QWidget):
             dialog_run=self.run_id;dialog_filters=dict(self.filters())
             dialog=QDialog(self);dialog.setWindowTitle('完整行程与兼容替代方案');dialog.resize(1050,780)
             layout=QVBoxLayout(dialog)
-            recommendation=QComboBox();recommendation.addItems(['舒适时间优先','少换站','费用优先','证据较完整','偏好匹配','全部方案'])
+            from ..tourism import available
+            recommendation=QComboBox()
+            if available():recommendation.addItem('综合推荐','recommendation')
+            for title,key in [('舒适时间优先','comfort'),('少换站','changes'),('费用优先','price'),('证据较完整','evidence'),('偏好匹配','preference'),('全部方案','comfort')]:recommendation.addItem(title,key)
             layout.addWidget(recommendation)
             info=QLabel('每次切换均选择整条已校验搭配，不独立拼接不同方案的车站。');layout.addWidget(info)
             selector=QComboBox();layout.addWidget(selector)
@@ -379,7 +420,8 @@ class ResultsPage(QWidget):
             page=[0];variants=[[]]
             def load_variants():
                 filters=dict(dialog_filters);filters['pattern']=row['pattern']
-                variants[0],count,_=query(self.main.store,dialog_run,filters,page[0],100,False,['comfort','changes','price','evidence','preference','comfort'][recommendation.currentIndex()])
+                detail_sort=recommendation.currentData()
+                variants[0],count,_=query(self.main.store,dialog_run,filters,page[0],100,False,detail_sort)
                 if not count:dialog.reject();return
                 if not variants[0]:page[0]=max(0,(count-1)//100);load_variants();return
                 selector.clear()

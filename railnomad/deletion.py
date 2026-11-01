@@ -1,5 +1,5 @@
 """Atomic catalog deletion with persistent exclusions for resumable searches."""
-import json,sqlite3
+import json,sqlite3,time
 from .storage import encode,now
 from .data.release import Cancelled,check_cancel
 
@@ -74,6 +74,7 @@ def delete(store,scope,run_ids,result_ids=(),patterns=(),progress=lambda **kw:No
             db.set_progress_handler(lambda:int(bool(cancel())),50000)
             selection=_selection(db,scope,run_ids,result_ids,patterns)
             if not selection['deleted_results'] and not selection['deleted_runs']:return selection
+            rank_states = dict(db.execute('SELECT run_id,version FROM tourism_rank_state WHERE run_id IN(SELECT id FROM selected_runs)')) if scope!='tasks' else {}
             progress(stage='删除所选内容',current=0,total=selection['deleted_results'])
             if scope!='tasks':
                 db.execute('INSERT OR IGNORE INTO deleted_results SELECT run_id,id,? FROM results WHERE id IN(SELECT id FROM selected_results)',(now(),))
@@ -85,10 +86,16 @@ def delete(store,scope,run_ids,result_ids=(),patterns=(),progress=lambda **kw:No
                 db.execute('DELETE FROM shared_parts WHERE run_id IN(SELECT id FROM selected_runs)')
                 db.execute('DELETE FROM fare_index_state WHERE run_id IN(SELECT id FROM selected_runs)')
                 db.execute("DELETE FROM settings WHERE key IN(SELECT 'fare_sync:'||id FROM selected_runs)")
+                db.execute("DELETE FROM settings WHERE key IN(SELECT 'tourism_generation:'||id FROM selected_runs)")
                 db.execute('DELETE FROM exports WHERE run_id IN(SELECT id FROM selected_runs)')
                 db.execute('DELETE FROM runs WHERE id IN(SELECT id FROM selected_runs)')
             else:
-                for run in selection['run_ids']:_update_audit(db,run)
+                for run in selection['run_ids']:
+                    _update_audit(db,run)
+                    if run in rank_states:
+                        count,tail=db.execute('SELECT COUNT(*),COALESCE(MAX(rowid),0) FROM results WHERE run_id=?',(run,)).fetchone()
+                        db.execute('INSERT OR REPLACE INTO tourism_rank_state VALUES(?,?,?,?)',(run,rank_states[run],count,tail))
+                        db.execute('INSERT OR REPLACE INTO settings VALUES(?,?)',('tourism_generation:'+run,str(time.time_ns())))
             check_cancel(cancel)
             db.execute("INSERT INTO settings VALUES('catalog_revision','1') ON CONFLICT(key) DO UPDATE SET value=CAST(CAST(value AS INTEGER)+1 AS TEXT)")
             db.set_progress_handler(None,0)

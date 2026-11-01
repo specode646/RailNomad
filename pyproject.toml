@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "railnomad"
-version = "0.4.12+public.1"
+version = "0.4.16+public.1"
 description = "Offline native desktop railway itinerary explorer"
 requires-python = ">=3.12"
 license = "MIT"
@@ -20,7 +20,7 @@ railnomad = "railnomad.__main__:main"
 include = ["railnomad*"]
 
 [tool.setuptools.package-data]
-railnomad = ["ui/assets/*.svg", "data/reference/*"]
+railnomad = ["ui/assets/*.svg", "data/reference/*", "data/tourism-scores.csv", "data/transport-scores.csv"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

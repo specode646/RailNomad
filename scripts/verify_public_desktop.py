@@ -43,6 +43,13 @@ def verify(exe, day):
         assert code==0 and event['event']=='done',event
         count=len(store.rows('SELECT id FROM results WHERE run_id=?',(run,)))
         assert count==4,count
+        from railnomad.tourism import ready, score
+        from railnomad.query import query
+        assert ready(store,run), '打包程序未生成综合排序索引'
+        ordered,total,_=query(store,run,sort='recommendation')
+        assert total==count and len(ordered)==count
+        base=score({'legs': [],'comfort_minutes':0},{},{},0)
+        assert abs((base-score({'legs': [],'comfort_minutes':20},{},{},0))-5/3)<1e-5
         seconds=time.monotonic()-started
         identity=store.rows('SELECT id FROM results WHERE run_id=?',(run,))[0]['id']
         code,event=job('fare',result_id=identity,date=day)
@@ -59,7 +66,8 @@ def verify(exe, day):
         shutil.copyfile(home/'desktop-smoke.png',folder/'desktop-public-results.png')
         report=dict(edition='public-offline',date=day,real_executable=True,results=count,search_wall_seconds=seconds,
                     reference_stations=3146,automatic_lookup_rejected=True,no_quote_cache=True,export_verified=True,
-                    task_settings_gui_verified=True,executable_sha256=hashlib.sha256(exe.read_bytes()).hexdigest())
+                    task_settings_gui_verified=True, recommendation_verified=True,
+                    executable_sha256=hashlib.sha256(exe.read_bytes()).hexdigest())
     (folder/'desktop-acceptance.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
     print(encode(report))
 

@@ -63,6 +63,11 @@ def execute(job_path, home):
         elif operation == 'search':
             from .domain.search import search
             result = search(store, job['run_id'], emit, cancelled)
+            from .tourism import build, available
+            if available():build(store, job['run_id'], emit, cancelled)
+        elif operation == 'tourism_rank':
+            from .tourism import build
+            result = build(store, job['run_id'], emit, cancelled)
         elif operation == 'export':
             from .export import export_run
             result = export_run(store, job['run_id'], job['path'], job['filters'], job['scope'], emit, cancelled)
